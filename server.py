@@ -13,7 +13,7 @@ from pystasmvt import mvtsql
 LAYERCONFIG_PATH='./layerconfig.json'
 
 # 最大スケールレベル
-MAX_SCALE_LEVEL=19
+MAX_SCALE_LEVEL=191
 
 # EXECUTE文格納用
 _SCALE_SQL_LIST={}
