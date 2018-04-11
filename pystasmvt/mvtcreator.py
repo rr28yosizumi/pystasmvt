@@ -5,8 +5,10 @@ import os
 from pystasmvt import mvtsql
 
 CONFIG={
-    'group_name':'',
-    'layers':'layerpath.json'
+    'groups':{
+        'group_name':'',
+        'layers':'layerpath.json'
+    }
 }
 
 # 最大スケールレベル
@@ -58,12 +60,20 @@ class MvtApplication(object):
             print('suspicious')
             return 1
 
-        if sani_zoom not in _SCALE_SQL_LIST.keys():
+        if group_name not in self._GROUP_SQL_LIST.keys():
+            return 1
+
+        layergroup = self._GROUP_SQL_LIST[group_name]
+
+        if sani_zoom not in layergroup.keys():
+            return 1
+        
+        if not self._ENGINE:
             return 1
 
         DBSession = sessionmaker(bind=self._ENGINE)
         session = DBSession()
-        final_query = self._GROUP_SQL_LIST[group['name']][sani_zoom]
+        final_query = layergroup[sani_zoom]
         try:
             return final_query.get_mvt_by_query(session,sani_x,sani_y,sani_zoom)
         except:
