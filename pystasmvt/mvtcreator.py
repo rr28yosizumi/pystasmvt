@@ -4,11 +4,21 @@ import json
 import os
 from pystasmvt import mvtsql
 
+#設定テンプレート
 CONFIG={
-    'groups':{
-        'group_name':'',
-        'layers':'layerpath.json'
-    }
+    'connection':{
+        'user':'',
+        'password':'',
+        'host':'',
+        'port':'',
+        'dbname':''
+    },
+    'groups':[
+        {
+            'group_name':'',
+            'layers':'layerpath.json'
+        }
+    ]
 }
 
 # 最大スケールレベル
@@ -22,31 +32,40 @@ def get_layerconfig_from_json(file):
         config = json.load(stream)
     return config
 
-class MvtApplication(object):
+class MvtCreator(object):
     def __init__(self):
         self._GROUP_SQL_LIST= {}
         self._ENGINE=None
     
     def init_db_session(self,config):
-        """ サーバ起動の事前準備処理
+        """ 事前準備処理
 
         設定ファイルの読み込み
         PREPAREの実行
         EXECUTE文のリスト作成
 
         """
-        self._ENGINE = create_engine('postgresql://'+os.getenv('POSTGRES_USER','map')+':'+os.getenv('POSTGRES_PASSWORD','map')+'@'+os.getenv('POSTGRES_HOST','localhost')+':'+os.getenv('POSTGRES_PORT','5432')+'/'+os.getenv('POSTGRES_DB','gis_test2'),
-        pool_size=20, max_overflow=0)
+
+        p_user= config['connection']['user']
+        p_pw = config['connection']['password']
+        p_host = config['connection']['host']
+        p_port = config['connection']['port']
+        p_dbname = config['connection']['dbname']
+
+        #self._ENGINE = create_engine('postgresql://'+os.getenv('POSTGRES_USER','map')+':'+os.getenv('POSTGRES_PASSWORD','map')+'@'+os.getenv('POSTGRES_HOST','localhost')+':'+os.getenv('POSTGRES_PORT','5432')+'/'+os.getenv('POSTGRES_DB','gis_test2'),
+        self._ENGINE = create_engine('postgresql://'+p_user+':'+p_pw+'@'+p_host+':'+p_port+'/'+p_dbname,pool_size=20, max_overflow=0)
 
         for group in config['groups']:
-            self._GROUP_SQL_LIST[group['name']]={}
-            layers = get_layerconfig_from_json(group['file'])
+            if group['group_name'] not in self._GROUP_SQL_LIST.keys():
+                self._GROUP_SQL_LIST[group['group_name']]={}
+    
+            layers = group['layers']
             if not layers:
                 return False
             for scale in range(MAX_SCALE_LEVEL):
                 prepared = mvtsql.MvtSql(layers,scale,scale)
                 if prepared:
-                    self._GROUP_SQL_LIST[group['name']][scale] = prepared
+                    self._GROUP_SQL_LIST[group['group_name']][scale] = prepared
         return True
     
     def get_mvt(self,group_name,zoom,x,y):
