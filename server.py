@@ -36,9 +36,9 @@ def init_db_session():
         'connection':{
             'user':os.getenv('POSTGRES_USER','map'),
             'password':os.getenv('POSTGRES_PASSWORD','map'),
-            'host':os.getenv('POSTGRES_HOST','r24119'),
+            'host':os.getenv('POSTGRES_HOST','sphere'),
             'port':os.getenv('POSTGRES_PORT','5432'),
-            'dbname':os.getenv('POSTGRES_DB','gis_test2')
+            'dbname':os.getenv('POSTGRES_DB','egg_1712asean')
         },
         'groups':layers['groups']
     }

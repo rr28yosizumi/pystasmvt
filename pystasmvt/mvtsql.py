@@ -33,7 +33,7 @@ def generate_sql(layer,bounds=4096,buffer=256,clip=True):
     sql = "SELECT ST_AsMVT(q, '{layername}', 4096, 'geom') "
     sql += "FROM ("
     sql += "    SELECT"
-    sql += "        {attr_col},"
+    sql += "        {attr_col}"
     sql += "        ST_AsMVTGeom("
     sql += "            {geofunc},"
     sql += "            st_makeenvelope(tile2lon({minx},{scale}), tile2lat({miny},{scale}), tile2lon({maxx},{scale}), tile2lat({maxy},{scale}), {srid}) ,"
@@ -41,13 +41,14 @@ def generate_sql(layer,bounds=4096,buffer=256,clip=True):
     sql += "            {buffer},"
     sql += "            {clip}) AS geom"
     sql += "    from ("
-    sql += "        SELECT {attr_col},(ST_Dump({geometry_col})).geom from {tablename} WHERE geom && st_makeenvelope(tile2lon({minx},{scale}), tile2lat({miny},{scale}), tile2lon({maxx},{scale}), tile2lat({maxy},{scale}), {srid}) {where}"
-    sql += "    ) a GROUP BY {attr_col}"
+    sql += "        SELECT {attr_col}(ST_Dump({geometry_col})).geom from {tablename} WHERE {geometry_col} && st_makeenvelope(tile2lon({minx},{scale}), tile2lat({miny},{scale}), tile2lon({maxx},{scale}), tile2lat({maxy},{scale}), {srid}) {where}"
+    sql += "    ) a {group_by_attr_col}"
     sql += ") as q"
     return sql.format(
         **{'layername': layer['layername'],
         'tablename': layer['tablename'],
-        'attr_col': layer['attr_col'],
+        'attr_col': layer['attr_col']+',' if layer['attr_col'] else '',
+        'group_by_attr_col':'GROUP BY '+layer['attr_col'] if layer['attr_col'] else '',
         'geometry_col': layer['geometry_col'],
         'srid': layer['srid'],
         'minx': '$2',
@@ -55,7 +56,7 @@ def generate_sql(layer,bounds=4096,buffer=256,clip=True):
         'maxx' : '$2+1',
         'maxy' : '$3+1',
         'scale' : '$1',
-        'where' : layer['where'] if layer['where'] else '',
+        'where' : ' AND '+layer['where'] if layer['where'] else '',
         'geofunc': geofunc,
         'bounds':bounds,
         'buffer':buffer,
