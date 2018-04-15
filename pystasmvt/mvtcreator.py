@@ -93,6 +93,8 @@ class MvtCreator(object):
         DBSession = sessionmaker(bind=self._ENGINE)
         session = DBSession()
         final_query = layergroup[sani_zoom]
+        if not final_query.is_query():
+            return 1
         try:
             return final_query.get_mvt_by_query(session,sani_x,sani_y,sani_zoom)
         except:

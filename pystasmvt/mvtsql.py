@@ -69,8 +69,8 @@ def get_mvt(session,sql,zoom,x,y):
 
     """
     try:
+        #print('sql:'+sql)
         response = list(session.execute(sql))
-        print(sql)
     except:
         # SQLに失敗した場合にロールバックしないとセッションをロックしてしまう。
         session.rollback()
@@ -120,6 +120,10 @@ class MvtSql(object):
 
         final_query = self.get_execute(sani_x,sani_y,sani_zoom)
         return get_mvt(session,final_query,z,x,y)
+    
+    def is_query(self):
+        return True if self._queri else False 
+
 
     
 

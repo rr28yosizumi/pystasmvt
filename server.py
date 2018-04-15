@@ -7,7 +7,7 @@ import json
 from pystasmvt import mvtcreator
 
 # 設定ファイルの格納先
-LAYERCONFIG_PATH='./mvtsetting.json'
+LAYERCONFIG_PATH='./mvtsetting1.json'
 
 # セッションの格納先
 
@@ -36,9 +36,9 @@ def init_db_session():
         'connection':{
             'user':os.getenv('POSTGRES_USER','map'),
             'password':os.getenv('POSTGRES_PASSWORD','map'),
-            'host':os.getenv('POSTGRES_HOST','sphere'),
+            'host':os.getenv('POSTGRES_HOST','localhost'),
             'port':os.getenv('POSTGRES_PORT','5432'),
-            'dbname':os.getenv('POSTGRES_DB','egg_1712asean')
+            'dbname':os.getenv('POSTGRES_DB','gis_test2')
         },
         'groups':layers['groups']
     }
@@ -54,6 +54,7 @@ class GetTile(tornado.web.RequestHandler):
         self.set_header("Content-Type", "application/x-protobuf")
         self.set_header("Content-Disposition", "attachment")
         self.set_header("Access-Control-Allow-Origin", "*")
+        print('{0}/{1}/{2}/{3}'.format(group,zoom,x,y))
         response = _MVTCREATOR.get_mvt(group,zoom,x,y)
         if response != 1:
             self.write(response)
