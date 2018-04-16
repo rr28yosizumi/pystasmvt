@@ -9,6 +9,12 @@ from pystasmvt import mvtcreator
 # 設定ファイルの格納先
 LAYERCONFIG_PATH='./mvtsetting1.json'
 
+# キャッシュ
+CACHE_PATH='./'
+
+# キャッシュ使用の有無
+CACHE_USE=True
+
 # セッションの格納先
 
 _MVTCREATOR=None
@@ -48,14 +54,55 @@ def init_db_session():
 
     return True
 
+def get_cache(group,zoom,x,y):
+    path = os.path.join(CACHE_PATH,group,zoom,x,'{0}.pbf'.format(y))
+    if os.path.exists(path):
+        binary=None
+        with open(path,'rb') as file:
+            binary = file.read()
+        return binary
+    else:
+        return None
+
+def set_cache(group,zoom,x,y,binary):
+    
+    path = os.path.join(CACHE_PATH,group,zoom,x,'{0}.pbf'.format(y))
+    if not os.path.exists(path):
+        dirpath = os.path.join(CACHE_PATH,group,zoom,x)
+        if not os.path.exists(dirpath):
+            os.makedirs(dirpath)
+        with open(path,'wb') as file:
+            file.write(binary)
+
+
 class GetTile(tornado.web.RequestHandler):
     def get(self,group, zoom,x,y):
-        global _MVTCREATOR
         self.set_header("Content-Type", "application/x-protobuf")
         self.set_header("Content-Disposition", "attachment")
         self.set_header("Access-Control-Allow-Origin", "*")
         print('{0}/{1}/{2}/{3}'.format(group,zoom,x,y))
+
+        if CACHE_USE:
+            self.used_cache(group,zoom,x,y)
+        else:
+            self.unused_cache(group,zoom,x,y)
+    
+    def unused_cache(self,group,zoom,x,y):
+        global _MVTCREATOR
+        print('create pbf')
         response = _MVTCREATOR.get_mvt(group,zoom,x,y)
+        if response != 1:
+            self.write(response)
+    
+    def used_cache(self,group,zoom,x,y):
+        global _MVTCREATOR
+        response = get_cache(group, zoom,x,y)
+        if not response:
+            print('create pbf')
+            response = _MVTCREATOR.get_mvt(group,zoom,x,y)
+            if response != 1:
+                set_cache(group,zoom,x,y,response)
+
         if response != 1:
             self.write(response)
 
