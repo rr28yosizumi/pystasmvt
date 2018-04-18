@@ -83,11 +83,19 @@ def get_mvt(session,sql,zoom,x,y):
     return final_tile
 
 class MvtSql(object):
-    def __init__(self,layers,scale_level,func_name):
+    def __init__(self,layers,scale_level,func_name,time_out=3000):
         self._scale_level=scale_level
         self._func_name=func_name
+        self._time_out = time_out
         result = generate_queris(layers,scale_level)
         self._queri = result
+
+    def _statement_timeout(self,session):
+        try:
+            session.execute('SET statement_timeout TO {0};'.format(self._time_out))
+        except:
+            session.rollback()
+            raise
     
     def get_query(self,x,y,z):
         return self._queri.replace('$2+1',str(x+1)).replace('$3+1',str(y+1)).replace('$1',str(z)).replace('$2',str(x)).replace('$3',str(y))
@@ -107,7 +115,8 @@ class MvtSql(object):
         except:
             print('suspicious')
             return 1
-
+        
+        self._statement_timeout(session)
         final_query = self.get_query(sani_x,sani_y,sani_zoom)
         return get_mvt(session,final_query,z,x,y)
     
@@ -117,7 +126,8 @@ class MvtSql(object):
         except:
             print('suspicious')
             return 1
-
+            
+        self._statement_timeout(session)
         final_query = self.get_execute(sani_x,sani_y,sani_zoom)
         return get_mvt(session,final_query,z,x,y)
     

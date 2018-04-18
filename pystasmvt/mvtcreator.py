@@ -7,16 +7,26 @@ from pystasmvt import mvtsql
 #設定テンプレート
 CONFIG={
     'connection':{
-        'user':'',
-        'password':'',
-        'host':'',
-        'port':'',
-        'dbname':''
+        'user':'',#require
+        'password':'',#require
+        'host':'',#require
+        'port':'',#require
+        'dbname':''#require
     },
     'groups':[
         {
-            'group_name':'',
-            'layers':'layerpath.json'
+            'group_name':'',#require
+            'layers':{#require
+                'layername':'',#require
+                'tablename':'',#require
+                'attr_col':'',#require
+                'where':'',#require
+                'geometry_col':'',#require
+                'srid':4236,#require
+                'geotype':'',#require
+                'enable_scale':[]#require
+            },
+            'time_out':''#option
         }
     ]
 }
@@ -52,6 +62,7 @@ class MvtCreator(object):
         p_port = config['connection']['port']
         p_dbname = config['connection']['dbname']
 
+
         #self._ENGINE = create_engine('postgresql://'+os.getenv('POSTGRES_USER','map')+':'+os.getenv('POSTGRES_PASSWORD','map')+'@'+os.getenv('POSTGRES_HOST','localhost')+':'+os.getenv('POSTGRES_PORT','5432')+'/'+os.getenv('POSTGRES_DB','gis_test2'),
         self._ENGINE = create_engine('postgresql://'+p_user+':'+p_pw+'@'+p_host+':'+p_port+'/'+p_dbname,pool_size=20, max_overflow=0)
 
@@ -63,7 +74,10 @@ class MvtCreator(object):
             if not layers:
                 return False
             for scale in range(MAX_SCALE_LEVEL):
-                prepared = mvtsql.MvtSql(layers,scale,scale)
+                time_out = 3000
+                if 'time_out' in group.keys():
+                    time_out = group['time_out']
+                prepared = mvtsql.MvtSql(layers,scale,scale,time_out)
                 if prepared:
                     self._GROUP_SQL_LIST[group['group_name']][scale] = prepared
         return True
