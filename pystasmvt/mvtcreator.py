@@ -34,6 +34,8 @@ CONFIG={
 # 最大スケールレベル
 MAX_SCALE_LEVEL=19
 
+DEFAULT_TIME_OUT=3000#ms
+
 def get_layerconfig_from_json(file):
     """ JSONファイルの読み込み
     """
@@ -74,7 +76,7 @@ class MvtCreator(object):
             if not layers:
                 return False
             for scale in range(MAX_SCALE_LEVEL):
-                time_out = 3000
+                time_out = DEFAULT_TIME_OUT
                 if 'time_out' in group.keys():
                     time_out = group['time_out']
                 prepared = mvtsql.MvtSql(layers,scale,scale,time_out)

@@ -18,6 +18,17 @@ def generate_queris(layers,scale_level):
     queri =  " UNION ALL ".join(queries) + ";"
     return queri
 
+def generate_namespace_table(namespacelist):
+    '''
+    複数のネームスペースに対応
+    '''
+    sql =[]
+    for i in namespacelist:
+        sql.append('SELECT {attr_col}(ST_Dump({geometry_col})).geom from '+i+'.{tablename} WHERE {geometry_col} && st_makeenvelope(tile2lon({minx},{scale}), tile2lat({miny},{scale}), tile2lon({maxx},{scale}), tile2lat({maxy},{scale}), {srid}) {where}')
+    
+    return ' UNION ALL '.join(sql)
+
+
 def generate_sql(layer,bounds=4096,buffer=256,clip=True):
     """ SQLの作成
 
@@ -29,7 +40,11 @@ def generate_sql(layer,bounds=4096,buffer=256,clip=True):
         geofunc = 'ST_Union(geom)'
     else:
         geofunc = 'ST_Collect(geom)'
-    
+
+    origin_table = " SELECT {attr_col}(ST_Dump({geometry_col})).geom from {tablename} WHERE {geometry_col} && st_makeenvelope(tile2lon({minx},{scale}), tile2lat({miny},{scale}), tile2lon({maxx},{scale}), tile2lat({maxy},{scale}), {srid}) {where}"
+    if'namespace' in layer.keys():
+        origin_table = generate_namespace_table(layer['namespace'])
+
     sql = "SELECT ST_AsMVT(q, '{layername}', 4096, 'geom') "
     sql += "FROM ("
     sql += "    SELECT"
@@ -41,7 +56,7 @@ def generate_sql(layer,bounds=4096,buffer=256,clip=True):
     sql += "            {buffer},"
     sql += "            {clip}) AS geom"
     sql += "    from ("
-    sql += "        SELECT {attr_col}(ST_Dump({geometry_col})).geom from {tablename} WHERE {geometry_col} && st_makeenvelope(tile2lon({minx},{scale}), tile2lat({miny},{scale}), tile2lon({maxx},{scale}), tile2lat({maxy},{scale}), {srid}) {where}"
+    sql += origin_table
     sql += "    ) a {group_by_attr_col}"
     sql += ") as q"
     return sql.format(

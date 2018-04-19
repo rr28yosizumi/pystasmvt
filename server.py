@@ -83,18 +83,18 @@ class GetTile(tornado.web.RequestHandler):
         print('{0}/{1}/{2}/{3}'.format(group,zoom,x,y))
 
         if CACHE_USE:
-            self.used_cache(group,zoom,x,y)
+            self._used_cache(group,zoom,x,y)
         else:
-            self.unused_cache(group,zoom,x,y)
+            self._unused_cache(group,zoom,x,y)
     
-    def unused_cache(self,group,zoom,x,y):
+    def _unused_cache(self,group,zoom,x,y):
         global _MVTCREATOR
         print('create pbf')
         response = _MVTCREATOR.get_mvt(group,zoom,x,y)
         if response != 1:
             self.write(response)
     
-    def used_cache(self,group,zoom,x,y):
+    def _used_cache(self,group,zoom,x,y):
         global _MVTCREATOR
         response = get_cache(group, zoom,x,y)
         if not response:
