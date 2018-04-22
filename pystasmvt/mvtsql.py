@@ -5,18 +5,38 @@ import io
 import sys
 import itertools
 
+_STASMVT_TEMPLATE = (
+        "SELECT ST_AsMVT(t_mvt, '{layername}', {extent}, 'mvt_geom') "
+        "FROM ("
+        "    SELECT"
+        "        {attr_col}"
+        "        ST_AsMVTGeom("
+        "            {geofunc},"
+        "            st_makeenvelope("
+        "               tile2lon({minx},{scale}),"
+        "               tile2lat({miny},{scale}),"
+        "               tile2lon({maxx},{scale}),"
+        "               tile2lat({maxy},{scale}),"
+        "               {srid}),"
+        "            {extent},"
+        "            {buffer},"
+        "            {clip}) AS mvt_geom"
+        "    from ("
+        "{origin_table}"
+        "    ) a {group_by_attr_col}"
+        ") as t_mvt")
 
 def generate_queris(layers,scale_level):
     queries = []
     for layer in layers:
-        if scale_level in layer['enable_scale']: 
+        if scale_level in layer['enable_scale']:
             queries.append(generate_sql(layer))
     
     if not queries:
         return ''
 
-    queri =  " UNION ALL ".join(queries) + ";"
-    return queri
+    query =  " UNION ALL ".join(queries) + ";"
+    return query
 
 def generate_namespace_table(namespacelist):
     '''
@@ -24,12 +44,22 @@ def generate_namespace_table(namespacelist):
     '''
     sql =[]
     for i in namespacelist:
-        sql.append('SELECT {attr_col}(ST_Dump({geometry_col})).geom from '+i+'.{tablename} WHERE {geometry_col} && st_makeenvelope(tile2lon({minx},{scale}), tile2lat({miny},{scale}), tile2lon({maxx},{scale}), tile2lat({maxy},{scale}), {srid}) {where}')
-    
+        sql.append((
+            " SELECT {attr_col}(ST_Dump({geometry_col})).geom "
+            " FROM "+i+'.'+"{tablename} "
+            " WHERE {geometry_col} && st_makeenvelope("
+            "                               tile2lon({minx},{scale}),"
+            "                               tile2lat({miny},{scale}),"
+            "                               tile2lon({maxx},{scale}),"
+            "                               tile2lat({maxy},{scale}),"
+            "                               {srid})"
+            "       {where}"
+        ))
+
     return ' UNION ALL '.join(sql)
 
 
-def generate_sql(layer,bounds=4096,buffer=256,clip=True):
+def generate_sql(layer,extent=4096,buffer=256,clip=True):
     """ SQLの作成
 
     """
@@ -41,41 +71,39 @@ def generate_sql(layer,bounds=4096,buffer=256,clip=True):
     else:
         geofunc = 'ST_Collect(geom)'
 
-    origin_table = " SELECT {attr_col}(ST_Dump({geometry_col})).geom from {tablename} WHERE {geometry_col} && st_makeenvelope(tile2lon({minx},{scale}), tile2lat({miny},{scale}), tile2lon({maxx},{scale}), tile2lat({maxy},{scale}), {srid}) {where}"
+    origin_table = (
+            " SELECT {attr_col}(ST_Dump({geometry_col})).geom "
+            " FROM {tablename} "
+            " WHERE {geometry_col} && st_makeenvelope("
+            "                               tile2lon({minx},{scale}),"
+            "                               tile2lat({miny},{scale}),"
+            "                               tile2lon({maxx},{scale}),"
+            "                               tile2lat({maxy},{scale}),"
+            "                               {srid})"
+            "       {where}"
+        )
+
     if'namespace' in layer.keys():
         origin_table = generate_namespace_table(layer['namespace'])
 
-    sql = "SELECT ST_AsMVT(q, '{layername}', 4096, 'geom') "
-    sql += "FROM ("
-    sql += "    SELECT"
-    sql += "        {attr_col}"
-    sql += "        ST_AsMVTGeom("
-    sql += "            {geofunc},"
-    sql += "            st_makeenvelope(tile2lon({minx},{scale}), tile2lat({miny},{scale}), tile2lon({maxx},{scale}), tile2lat({maxy},{scale}), {srid}) ,"
-    sql += "            {bounds},"
-    sql += "            {buffer},"
-    sql += "            {clip}) AS geom"
-    sql += "    from ("
-    sql += origin_table
-    sql += "    ) a {group_by_attr_col}"
-    sql += ") as q"
-    return sql.format(
-        **{'layername': layer['layername'],
-        'tablename': layer['tablename'],
-        'attr_col': layer['attr_col']+',' if layer['attr_col'] else '',
-        'group_by_attr_col':'GROUP BY '+layer['attr_col'] if layer['attr_col'] else '',
-        'geometry_col': layer['geometry_col'],
-        'srid': layer['srid'],
-        'minx': '$2',
-        'miny' : '$3',
-        'maxx' : '$2+1',
-        'maxy' : '$3+1',
-        'scale' : '$1',
-        'where' : ' AND '+layer['where'] if layer['where'] else '',
-        'geofunc': geofunc,
-        'bounds':bounds,
-        'buffer':buffer,
-        'clip':'true' if clip else 'false'
+    return _STASMVT_TEMPLATE.replace('{origin_table}',origin_table).format(
+        **{
+            'layername': layer['layername'],
+            'tablename': layer['tablename'],
+            'attr_col': layer['attr_col']+',' if layer['attr_col'] else '',
+            'group_by_attr_col':'GROUP BY '+layer['attr_col'] if layer['attr_col'] else '',
+            'geometry_col': layer['geometry_col'],
+            'srid': layer['srid'],
+            'minx': '$2',
+            'miny': '$3',
+            'maxx': '$2+1',
+            'maxy': '$3+1',
+            'scale': '$1',
+            'where': ' AND '+layer['where'] if layer['where'] else '',
+            'geofunc': geofunc,
+            'extent':extent,
+            'buffer':buffer,
+            'clip':'true' if clip else 'false'
         }
     )
 
@@ -129,7 +157,7 @@ class MvtSql(object):
             sani_zoom,sani_x,sani_y = int(z),int(x),int(y)
         except:
             print('suspicious')
-            return 1
+            return None
         
         self._statement_timeout(session)
         final_query = self.get_query(sani_x,sani_y,sani_zoom)
@@ -140,7 +168,7 @@ class MvtSql(object):
             sani_zoom,sani_x,sani_y = int(z),int(x),int(y)
         except:
             print('suspicious')
-            return 1
+            return None
             
         self._statement_timeout(session)
         final_query = self.get_execute(sani_x,sani_y,sani_zoom)

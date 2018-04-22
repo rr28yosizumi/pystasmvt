@@ -18,6 +18,7 @@ CONFIG={
             'group_name':'',#require
             'layers':{#require
                 'layername':'',#require
+                'namespace':[],#option
                 'tablename':'',#require
                 'attr_col':'',#require
                 'where':'',#require
@@ -93,24 +94,24 @@ class MvtCreator(object):
             del zoom,x,y
         except:
             print('suspicious')
-            return 1
+            return None
 
         if group_name not in self._GROUP_SQL_LIST.keys():
-            return 1
+            return None
 
         layergroup = self._GROUP_SQL_LIST[group_name]
 
         if sani_zoom not in layergroup.keys():
-            return 1
+            return None
         
         if not self._ENGINE:
-            return 1
+            return None
 
         DBSession = sessionmaker(bind=self._ENGINE)
         session = DBSession()
         final_query = layergroup[sani_zoom]
         if not final_query.is_query():
-            return 1
+            return None
         try:
             return final_query.get_mvt_by_query(session,sani_x,sani_y,sani_zoom)
         except:

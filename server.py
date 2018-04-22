@@ -1,10 +1,13 @@
 import tornado.ioloop
 import tornado.web
+from tornado import gen
 import io
 import os
 import json
+import concurrent.futures
 
 from pystasmvt import mvtcreator
+from pystasmvt import mvtcache
 
 # 設定ファイルの格納先
 LAYERCONFIG_PATH='./mvtsetting1.json'
@@ -15,9 +18,14 @@ CACHE_PATH='./'
 # キャッシュ使用の有無
 CACHE_USE=True
 
-# セッションの格納先
+#スレッド
+EXECUTOR = concurrent.futures.ThreadPoolExecutor(max_workers=3)
 
+#タイル生成
 _MVTCREATOR=None
+
+#キャッシュの生成、保存、取得
+_CACHE=None
 
 def get_layerconfig_from_json(file):
     """ JSONファイルの読み込み
@@ -49,62 +57,68 @@ def init_db_session():
         'groups':layers['groups']
     }
     global _MVTCREATOR
+    global _CACHE
     _MVTCREATOR = mvtcreator.MvtCreator()
     _MVTCREATOR.init_db_session(config)
 
+    if CACHE_USE:
+        _CACHE = mvtcache.MbtilesCache(CACHE_PATH)
+        #_CACHE = mvtcache.FileCache(CACHE_PATH)
+
     return True
 
-def get_cache(group,zoom,x,y):
-    path = os.path.join(CACHE_PATH,group,zoom,x,'{0}.pbf'.format(y))
-    if os.path.exists(path):
-        binary=None
-        with open(path,'rb') as file:
-            binary = file.read()
-        return binary
-    else:
-        return None
-
-def set_cache(group,zoom,x,y,binary):
-    
-    path = os.path.join(CACHE_PATH,group,zoom,x,'{0}.pbf'.format(y))
-    if not os.path.exists(path):
-        dirpath = os.path.join(CACHE_PATH,group,zoom,x)
-        if not os.path.exists(dirpath):
-            os.makedirs(dirpath)
-        with open(path,'wb') as file:
-            file.write(binary)
-
-
 class GetTile(tornado.web.RequestHandler):
+    @tornado.web.asynchronous
+    @gen.engine
     def get(self,group, zoom,x,y):
+
+        #https://stackoverflow.com/questions/11679040/using-gen-task-with-tornado-for-a-simple-function
+
+        #https://gist.github.com/lbolla/3826189
+
         self.set_header("Content-Type", "application/x-protobuf")
         self.set_header("Content-Disposition", "attachment")
         self.set_header("Access-Control-Allow-Origin", "*")
         print('{0}/{1}/{2}/{3}'.format(group,zoom,x,y))
 
-        if CACHE_USE:
-            self._used_cache(group,zoom,x,y)
-        else:
-            self._unused_cache(group,zoom,x,y)
+        #イベントループを作るだけで非同期処理を自動的にしてくれるわけではない。
+        response = yield gen.Task(self.fatch_tile_data,group,zoom,x,y)
+        
+        if response != None:
+            self.write(response)
+        self.finish()
+    
+    def fatch_tile_data(self,group,zoom,x,y,callback):
+        
+        def fatch_func():
+            response=None
+            if CACHE_USE:
+                response = self._used_cache(group,zoom,x,y)
+            else:
+                response = self._unused_cache(group,zoom,x,y)
+            #コールバック関数に戻り値を渡すことで、yieldの戻り値にしてくれる。
+            callback(response)
+
+        EXECUTOR.submit(fatch_func)
+
     
     def _unused_cache(self,group,zoom,x,y):
         global _MVTCREATOR
-        print('create pbf')
         response = _MVTCREATOR.get_mvt(group,zoom,x,y)
-        if response != 1:
-            self.write(response)
+        print('created pbf')
+        return response
+        
     
     def _used_cache(self,group,zoom,x,y):
         global _MVTCREATOR
-        response = get_cache(group, zoom,x,y)
+        global _CACHE
+        response = _CACHE.get_tile(group,x,y,zoom)
         if not response:
-            print('create pbf')
             response = _MVTCREATOR.get_mvt(group,zoom,x,y)
-            if response != 1:
-                set_cache(group,zoom,x,y,response)
-
-        if response != 1:
-            self.write(response)
+            print('created pbf')
+            if response != None:
+                _CACHE.set_tile(group,x,y,zoom,response)
+        return response
 
 def main():
     if not init_db_session():
@@ -112,7 +126,7 @@ def main():
         return
     
     application = tornado.web.Application([(r"/tiles/([a-z_]+)/([0-9]+)/([0-9]+)/([0-9]+).pbf", GetTile)])
-    print("Postserve started..")
+    print("Pystasmve_serve started..")
     application.listen(8080)
     tornado.ioloop.IOLoop.instance().start()
 
