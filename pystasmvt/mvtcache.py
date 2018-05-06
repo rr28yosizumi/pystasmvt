@@ -6,7 +6,7 @@ import json
 import logging
 import threading
 
-logger = logging.getLogger(__name__)
+LOGGER = logging.getLogger(__name__)
 
 def get_cache_from_file(basepath,group,zoom,x,y):
     path = os.path.join(basepath,group,zoom,x,'{0}.pbf'.format(y))
@@ -29,6 +29,9 @@ def set_cache_to_file(basepath,group,zoom,x,y,binary):
             file.write(binary)
 
 class FileCache(object):
+    '''
+    ファイル保存
+    '''
     def __init__(self,dir):
         self._dir=dir
         self._lock = threading.Lock()
@@ -50,8 +53,8 @@ def mbtiles_connect(mbtiles_file, silent):
         return con
     except Exception as e:
         if not silent:
-            logger.error("Could not connect to database")
-            logger.exception(e)
+            LOGGER.error("Could not connect to database")
+            LOGGER.exception(e)
         raise
 
 def mbtiles_setup(cur):
@@ -155,8 +158,8 @@ class MbtilesCache(object):
                 self._mbtiles_dic[group] = Mbtiles(os.path.join(self._dir,group+'.mbt'))
             self._mbtiles_dic[group].set_tile(x,y,z,binary)
         except Exception as e:
-            logger.error("MbtilesCache set_tile")
-            logger.exception(e)
+            LOGGER.error("MbtilesCache set_tile")
+            LOGGER.exception(e)
             raise
 
         
@@ -166,7 +169,7 @@ class MbtilesCache(object):
                 return None
             return self._mbtiles_dic[group].get_tile(x,y,z)
         except Exception as e:
-            logger.error("MbtilesCache get_tile")
-            logger.exception(e)
+            LOGGER.error("MbtilesCache get_tile")
+            LOGGER.exception(e)
             raise
         

@@ -5,6 +5,9 @@ import io
 import sys
 import itertools
 
+import logging
+LOGGER = logging.getLogger(__name__)
+
 _STASMVT_TEMPLATE = (
         "SELECT ST_AsMVT(t_mvt, '{layername}', {extent}, 'mvt_geom') "
         "FROM ("
@@ -156,7 +159,7 @@ class MvtSql(object):
         try:								# Sanitize the inputs
             sani_zoom,sani_x,sani_y = int(z),int(x),int(y)
         except:
-            print('suspicious')
+            LOGGER.error('suspicious')
             return None
         
         self._statement_timeout(session)
@@ -167,7 +170,7 @@ class MvtSql(object):
         try:								# Sanitize the inputs
             sani_zoom,sani_x,sani_y = int(z),int(x),int(y)
         except:
-            print('suspicious')
+            LOGGER.error('suspicious')
             return None
             
         self._statement_timeout(session)

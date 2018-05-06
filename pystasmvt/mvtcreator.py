@@ -2,7 +2,10 @@ from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 import json
 import os
+import logging
 from pystasmvt import mvtsql
+
+LOGGER = logging.getLogger(__name__)
 
 #設定テンプレート
 CONFIG={
@@ -92,8 +95,9 @@ class MvtCreator(object):
         try:								# Sanitize the inputs
             sani_zoom,sani_x,sani_y = int(zoom),int(x),int(y)
             del zoom,x,y
-        except:
-            print('suspicious')
+        except Exception as e:
+            LOGGER.error('suspicious')
+            LOGGER.exception(e)
             return None
 
         if group_name not in self._GROUP_SQL_LIST.keys():
@@ -114,7 +118,9 @@ class MvtCreator(object):
             return None
         try:
             return final_query.get_mvt_by_query(session,sani_x,sani_y,sani_zoom)
-        except:
-            # SQLに失敗した場合にロールバックしないとセッションをロックしてしまう。
-            session.rollback()
+        except Exception as e:
+            LOGGER.error("get_mvt")
+            LOGGER.exception(e)
             raise
+        finally:
+            session.connection().close()
