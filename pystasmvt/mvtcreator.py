@@ -38,7 +38,7 @@ CONFIG={
 # 最大スケールレベル
 MAX_SCALE_LEVEL=19
 
-DEFAULT_TIME_OUT=3000#ms
+DEFAULT_TIME_OUT=60000#ms
 
 def get_layerconfig_from_json(file):
     """ JSONファイルの読み込み
@@ -67,7 +67,6 @@ class MvtCreator(object):
         p_host = config['connection']['host']
         p_port = config['connection']['port']
         p_dbname = config['connection']['dbname']
-
 
         #self._ENGINE = create_engine('postgresql://'+os.getenv('POSTGRES_USER','map')+':'+os.getenv('POSTGRES_PASSWORD','map')+'@'+os.getenv('POSTGRES_HOST','localhost')+':'+os.getenv('POSTGRES_PORT','5432')+'/'+os.getenv('POSTGRES_DB','gis_test2'),
         self._ENGINE = create_engine('postgresql://'+p_user+':'+p_pw+'@'+p_host+':'+p_port+'/'+p_dbname,pool_size=20, max_overflow=0)

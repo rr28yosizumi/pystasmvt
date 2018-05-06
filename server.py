@@ -1,8 +1,6 @@
 import tornado.ioloop
 import tornado.web
 
-from pystasmvt import mvtcreator
-from pystasmvt import mvtcache
 from pystasmvt import mvtserver
 
 import logging
@@ -33,5 +31,6 @@ def main():
     tornado.ioloop.IOLoop.instance().start()
 
 if __name__ == "__main__":
+    logging.basicConfig(level=logging.INFO)
     # コネクションの作成 
     main()

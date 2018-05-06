@@ -7,7 +7,6 @@ import json
 import concurrent.futures
 
 import logging
-
 LOGGER = logging.getLogger(__name__)
 
 from pystasmvt import mvtcreator
