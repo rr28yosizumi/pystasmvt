@@ -30,7 +30,8 @@ CONFIG={
                 'geotype':'',#require
                 'enable_scale':[]#require
             },
-            'time_out':''#option
+            'time_out':'',#option
+            'extent':''#option
         }
     ]
 }
@@ -39,6 +40,9 @@ CONFIG={
 MAX_SCALE_LEVEL=19
 
 DEFAULT_TIME_OUT=60000#ms
+DEFAULT_EXTENT = 16386
+DEFAULT_BUFFER = 256
+DEFAULT_CLIP=True
 
 def get_layerconfig_from_json(file):
     """ JSONファイルの読み込み
@@ -74,15 +78,29 @@ class MvtCreator(object):
         for group in config['groups']:
             if group['group_name'] not in self._GROUP_SQL_LIST.keys():
                 self._GROUP_SQL_LIST[group['group_name']]={}
+            
+            time_out = DEFAULT_TIME_OUT
+            if 'time_out' in group.keys():
+                time_out = group['time_out']
+
+            extent = DEFAULT_EXTENT
+            if 'extent' in group.keys():
+                extent =  group['extent']
+            
+            buffer = DEFAULT_BUFFER
+            if 'buffer' in group.keys():
+                extent =  group['buffer']
+            
+            clip = DEFAULT_CLIP
+            if 'clip' in group.keys():
+                clip = group['clip']
     
             layers = group['layers']
             if not layers:
                 return False
+                
             for scale in range(MAX_SCALE_LEVEL):
-                time_out = DEFAULT_TIME_OUT
-                if 'time_out' in group.keys():
-                    time_out = group['time_out']
-                prepared = mvtsql.MvtSql(layers,scale,scale,time_out)
+                prepared = mvtsql.MvtSql(layers,scale,scale,time_out,extent,buffer,clip)
                 if prepared:
                     self._GROUP_SQL_LIST[group['group_name']][scale] = prepared
         return True

@@ -29,11 +29,11 @@ _STASMVT_TEMPLATE = (
         "    ) a {group_by_attr_col}"
         ") as t_mvt")
 
-def generate_queris(layers,scale_level):
+def generate_queris(layers,scale_level,extent=4096,buffer=256,clip=True):
     queries = []
     for layer in layers:
         if scale_level in layer['enable_scale']:
-            queries.append(generate_sql(layer))
+            queries.append(generate_sql(layer,extent,buffer,clip))
     
     if not queries:
         return ''
@@ -129,11 +129,11 @@ def get_mvt(session,sql,zoom,x,y):
     return final_tile
 
 class MvtSql(object):
-    def __init__(self,layers,scale_level,func_name,time_out=3000):
+    def __init__(self,layers,scale_level,func_name,time_out=3000,extent=4096,buffer=256,clip=True):
         self._scale_level=scale_level
         self._func_name=func_name
         self._time_out = time_out
-        result = generate_queris(layers,scale_level)
+        result = generate_queris(layers,scale_level,extent,buffer,clip)
         self._queri = result
 
     def _statement_timeout(self,session):
