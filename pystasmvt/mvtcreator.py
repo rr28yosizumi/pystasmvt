@@ -44,14 +44,6 @@ DEFAULT_EXTENT = 16386
 DEFAULT_BUFFER = 256
 DEFAULT_CLIP=True
 
-def get_layerconfig_from_json(file):
-    """ JSONファイルの読み込み
-    """
-    config = None
-    with open(file,'r') as stream:
-        config = json.load(stream)
-    return config
-
 class MvtCreator(object):
     def __init__(self):
         self._GROUP_SQL_LIST= {}
@@ -66,7 +58,7 @@ class MvtCreator(object):
 
         """
 
-        p_user= config['connection']['user']
+        p_user = config['connection']['user']
         p_pw = config['connection']['password']
         p_host = config['connection']['host']
         p_port = config['connection']['port']

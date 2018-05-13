@@ -47,13 +47,15 @@ class GetMvtTile(tornado.web.RequestHandler):
 
 class MvtCreateServer(object):
 
-    def __init__(self,layerconfig_path,use_cache=True,cache_path ='./'):
+    def __init__(self,layerconfig_path,connection,use_cache=True,cache_path ='./',cache_to_file=False):
         self._layerconfig_path = layerconfig_path
         self._executeor = concurrent.futures.ThreadPoolExecutor(max_workers=3)
         self._mvtcreator = None
         self._cache_path = cache_path
         self._cache = None
         self._use_cache = use_cache
+        self._connection = connection
+        self._cache_to_file = cache_to_file
         self._init_db_session()
 
     def _init_db_session(self):
@@ -67,21 +69,17 @@ class MvtCreateServer(object):
         layers = _get_layerconfig_from_json(self._layerconfig_path)
 
         config = {
-            'connection':{
-                'user':os.getenv('POSTGRES_USER','map'),
-                'password':os.getenv('POSTGRES_PASSWORD','map'),
-                'host':os.getenv('POSTGRES_HOST','localhost'),
-                'port':os.getenv('POSTGRES_PORT','5432'),
-                'dbname':os.getenv('POSTGRES_DB','gis_test2')
-            },
+            'connection':self._connection,
             'groups':layers['groups']
         }
         self._mvtcreator = mvtcreator.MvtCreator()
         self._mvtcreator.init_db_session(config)
 
         if self._use_cache:
-            self._cache = mvtcache.MbtilesCache(self._cache_path)
-            #self._cache = mvtcache.FileCache(self._cache_path)
+            if self._cache_to_file:
+                self._cache = mvtcache.FileCache(self._cache_path)
+            else:
+                self._cache = mvtcache.MbtilesCache(self._cache_path)
 
         return True
     

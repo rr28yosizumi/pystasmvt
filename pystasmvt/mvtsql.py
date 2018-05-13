@@ -110,12 +110,11 @@ def generate_sql(layer,extent=4096,buffer=256,clip=True):
         }
     )
 
-def get_mvt(session,sql,zoom,x,y):
+def get_mvt(session,sql):
     """ ベクタータイルのバイナリを生成
 
     """
     try:
-        #print('sql:'+sql)
         response = list(session.execute(sql))
     except:
         # SQLに失敗した場合にロールバックしないとセッションをロックしてしまう。
@@ -164,7 +163,7 @@ class MvtSql(object):
         
         self._statement_timeout(session)
         final_query = self.get_query(sani_x,sani_y,sani_zoom)
-        return get_mvt(session,final_query,z,x,y)
+        return get_mvt(session,final_query)
     
     def get_mvt_by_execute(self,session,x,y,z):
         try:								# Sanitize the inputs
@@ -175,7 +174,7 @@ class MvtSql(object):
             
         self._statement_timeout(session)
         final_query = self.get_execute(sani_x,sani_y,sani_zoom)
-        return get_mvt(session,final_query,z,x,y)
+        return get_mvt(session,final_query)
     
     def is_query(self):
         return True if self._queri else False 
